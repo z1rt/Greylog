@@ -8,15 +8,15 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <section class="banner" id="sec">
+    <section class="banner" id="particles-js">
         <header>
-            <a href="#" class="logo">Logo</a>
+            <a href="#" class="logo">GO</a>
             <div id="toggle" onclick="toggle()"></div>
         </header>
         <div class="content">
             <h2>Hi,<br>I'm <span>Kirill Kositskiy</span></h2>
             <p>
-                Lorem ipsum, dolor sit amet consectetur adipisicing elit. Itaque cumque nostrum voluptatibus impedit fugiat debitis dolorem aspernatur optio necessitatibus, distinctio laborum, iure quod voluptatem eos! Id, consectetur dolores. Eaque, a?
+                Welcome to my accomplishments page. 
             </p>
             <a href="#">Know More</a>
         </div>
@@ -25,6 +25,10 @@
             <li><a href="#"><img src="inst.png"></a></li>
             <li><a href="#"><img src="other.png"></a></li>
         </ul>
+    </section>
+    <section class="About" id="Ab">
+        <div  class="about-content"></div>
+
     </section>
     <div id="navigation">
         <ul>
@@ -38,13 +42,16 @@
     </div>
     <script type="text/javascript">
         function toggle(){
-            var sec = document.getElementById('sec');
+            var particles = document.getElementById('particles-js');
             var nav = document.getElementById('navigation');
-            sec.classList.toggle('active');
+            particles.classList.toggle('active');
             nav.classList.toggle('active');
         }
 
     </script> 
+    <script type="text/javascript" src="particles.js"></script>
+    <script type="text/javascript" src="app.js"></script>
 
 </body>
 </html>
+

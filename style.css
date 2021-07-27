@@ -6,6 +6,20 @@
     box-sizing: border-box;
     font-family: 'Poppins', sans-serif;
 }
+body{
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+}
+#particles-js{
+    height: 100vh;
+    background-size: cover;
+    background-position: center;
+    background: #46acdb;
+    background: -webkit-linear-gradient(to right, #46acdb, #00ff73); 
+    background: linear-gradient(to right, #46acdb, #00ff73); 
+
+}
 header{
     position: absolute;
     top: 0;
@@ -66,7 +80,7 @@ header #toggle:after
     width: 100%;
     min-height: 100vh;
     padding: 100px;
-    background: url(back.jpg);
+    /* background: url(Windy.jpg); */
     background-size: cover;
     display: flex;
     align-items: center;
@@ -137,12 +151,13 @@ header #toggle:after
     position: relative;
     display: inline-block;
     margin-top: 20px;
-    background: #fff;
-    color: #000;
+    background: #000;
+    color: #fff;
     padding: 10px 30px;
     text-decoration: none;
     font-size: 1.2em;
     font-weight: 500;
+    border-radius: 15px;
 }
 .sci
 {
@@ -163,17 +178,24 @@ header #toggle:after
     width: 50px;
     height: 50px;
     text-decoration: none;
-    border: 1px solid #fff;
     margin: 10px 0 0;
 }
 .sci li a:hover
 {
     background: #fff;
+    border-radius: 50%;
 }
 .sci li a img
 {
-    max-width: 30px;
+    max-width: 40px;
+    border-radius: 50%;
 }
+.logo{
+    position: relative;
+    background: #000;
+    border-radius: 50%;
+}
+
 @media (max-width: 850px)
 {
     header
