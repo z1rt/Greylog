@@ -1,0 +1,114 @@
+version: '3.8'
+services:
+  suricata:
+    build: .
+    container_name: suricata
+    restart: always
+    environment:
+      # For ET Pro ruleset replace "OPEN" with your OINKCODE
+      - OINKCODE=OPEN
+    # Loading externel Rules from URL
+    # - FROMURL="https://username:password@yoururl.com|https://username:password@otherurl.com"
+    #    network_mode: "host"
+    networks:
+      - bridge
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
+      - NET_RAW
+    image: "dtagdevsec/suricata:2204"
+    volumes:
+      - /data/suricata/log:/var/log/suricata
+
+  mongo:
+    image: mongo:4.2
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_configdb:/data/configdb
+    links:
+      - elasticsearch
+    networks:
+      - bridge
+    ports:
+      - 27017:27017
+
+  elasticsearch:
+    image: 'elasticsearch:7.11.1'
+    container_name: elasticsearch
+    restart: unless-stopped
+    ports:
+      - '0.0.0.0:9200:9200'
+    environment:
+      - http.host=0.0.0.0
+      - discovery.type=single-node
+      - cluster.name=greylog
+      - script.allowed_types= inline
+      - thread_pool.search.queue_size=100000
+      - thread_pool.write.queue_size=10000
+      - gateway.recover_after_nodes=1
+      - xpack.security.enabled=false
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - './vol/elasticsearch/data:/usr/share/elasticsearch/data'
+      - './vol/elasticsearch/logs:/usr/share/elasticsearch/logs'
+    networks:
+      - bridge
+
+  logstash:
+    container_name: logstash
+    image: 'logstash:7.11.1'
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:5044:5044"
+    links:
+      - elasticsearch
+    networks:
+      - bridge
+
+
+  graylog:
+    image: graylog/graylog:4.3
+    networks:
+      - bridge
+    volumes:
+      - graylog_data:/usr/share/graylog/data
+    environment:
+      # CHANGE ME (must be at least 16 characters)!
+      - TZ=America/Chicago
+      - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
+      - GRAYLOG_ROOT_TIMEZONE=America/Chicago
+      # Password: admin
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_HTTP_EXTERNAL_URI=http://0.0.0.0:9000/
+    entrypoint: /usr/bin/tini -- wait-for-it 0.0.0.0:9200 --  /docker-entrypoint.sh
+    restart: always
+    links:
+      - mongo
+      - elasticsearch
+    depends_on:
+      - mongo
+      - elasticsearch
+    ports:
+      # Graylog web interface and REST API
+      - 9000:9000
+      # Syslog TCP
+      - 1514:1514
+      # Syslog UDP
+      - 1514:1514/udp
+      # GELF TCP
+      - 12201:12201
+      # GELF UDP
+      - 12201:12201/udp
+
+volumes:
+  mongodb_data:
+  mongodb_configdb:
+  es_data:
+  graylog_data:
+networks:
+  bridge:
