@@ -1,36 +1,20 @@
-version: '3.8'
+version: "3.8"
 services:
-  suricata:
-    build: .
-    container_name: suricata
-    restart: always
-    environment:
-      # For ET Pro ruleset replace "OPEN" with your OINKCODE
-      - OINKCODE=OPEN
-    # Loading externel Rules from URL
-    # - FROMURL="https://username:password@yoururl.com|https://username:password@otherurl.com"
-    #    network_mode: "host"
-    networks:
-      - bridge
-    cap_add:
-      - NET_ADMIN
-      - SYS_NICE
-      - NET_RAW
-    image: "dtagdevsec/suricata:2204"
-    volumes:
-      - /data/suricata/log:/var/log/suricata
-
-  mongo:
-    image: mongo:4.2
-    volumes:
-      - mongodb_data:/data/db
-      - mongodb_configdb:/data/configdb
-    links:
-      - elasticsearch
-    networks:
-      - bridge
+  nginx:
+    container_name: nginx
+    hostname: nginx
+    image: nginx:1.19.5
     ports:
-      - 27017:27017
+      - 80:80
+      - 443:443
+    networks:
+      - proxy
+    volumes:
+      - ./vol/nginx:/etc/nginx/conf.d
+      - ./vol/ssl:/etc/ssl
+    restart: on-failure
+    links:
+      - thehive
 
   elasticsearch:
     image: 'elasticsearch:7.11.1'
@@ -41,7 +25,7 @@ services:
     environment:
       - http.host=0.0.0.0
       - discovery.type=single-node
-      - cluster.name=greylog
+      - cluster.name=hive
       - script.allowed_types= inline
       - thread_pool.search.queue_size=100000
       - thread_pool.write.queue_size=10000
@@ -57,58 +41,45 @@ services:
       - './vol/elasticsearch/data:/usr/share/elasticsearch/data'
       - './vol/elasticsearch/logs:/usr/share/elasticsearch/logs'
     networks:
-      - bridge
+      - backend
 
-  logstash:
-    container_name: logstash
-    image: 'logstash:7.11.1'
+  thehive:
+    container_name: thehive
+    image: 'thehiveproject/thehive4:latest'
     restart: unless-stopped
     ports:
-      - "0.0.0.0:5044:5044"
-    links:
-      - elasticsearch
-    networks:
-      - bridge
-
-
-  graylog:
-    image: graylog/graylog:4.3
-    networks:
-      - bridge
+      - '0.0.0.0:9000:9000'
     volumes:
-      - graylog_data:/usr/share/graylog/data
-    environment:
-      # CHANGE ME (must be at least 16 characters)!
-      - TZ=America/Chicago
-      - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
-      - GRAYLOG_ROOT_TIMEZONE=America/Chicago
-      # Password: admin
-      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
-      - GRAYLOG_HTTP_EXTERNAL_URI=http://0.0.0.0:9000/
-    entrypoint: /usr/bin/tini -- wait-for-it 0.0.0.0:9200 --  /docker-entrypoint.sh
-    restart: always
-    links:
-      - mongo
-      - elasticsearch
-    depends_on:
-      - mongo
-      - elasticsearch
-    ports:
-      # Graylog web interface and REST API
-      - 9000:9000
-      # Syslog TCP
-      - 1514:1514
-      # Syslog UDP
-      - 1514:1514/udp
-      # GELF TCP
-      - 12201:12201
-      # GELF UDP
-      - 12201:12201/udp
+      - ./vol/thehive/application.conf:/etc/thehive/application.conf
+      - ./vol/thehive/db:/opt/thp/thehive/db
+      - ./vol/thehive/data:/opt/thp/thehive/data
+      - ./vol/thehive/index:/opt/thp/thehive/index
+    command: '--no-config --no-config-secret'
+    networks:
+      - proxy
+      - backend
 
-volumes:
-  mongodb_data:
-  mongodb_configdb:
-  es_data:
-  graylog_data:
+  cortex:
+    container_name: cortex
+    image: thehiveproject/cortex:latest
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+    networks:
+      - proxy
+      - backend
+    command:
+      --job-directory ${JOB_DIRECTORY}
+    environment:
+      - 'JOB_DIRECTORY=${JOB_DIRECTORY}'
+    volumes:
+      - './vol/cortex/application.conf:/etc/cortex/application.conf'
+      - '${JOB_DIRECTORY}:${JOB_DIRECTORY}'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    ports:
+      - '0.0.0.0:9001:9001'
+
 networks:
-  bridge:
+  backend:
+  proxy:
+    external: true
